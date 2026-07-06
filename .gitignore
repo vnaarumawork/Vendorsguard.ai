@@ -1,0 +1,23 @@
+# Environments
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+venvs/
+ENV/
+env/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# IDE and OS files
+.DS_Store
+.idea/
+.vscode/
+
+# Pre-commit baseline
+.detect-secrets.baseline

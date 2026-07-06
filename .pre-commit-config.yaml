@@ -1,0 +1,25 @@
+exclude: '^(source/|vendorguard_ai\.egg-info/|\.venv/|venv/)'
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: detect-private-key
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        exclude: |
+          (?x)^(
+            pyproject.toml|
+            requirements.txt
+          )$
+
+  - repo: local
+    hooks:
+      - id: semgrep
+        name: Semgrep Scan
+        entry: .venv/bin/semgrep scan --config semgrep_rules.yml --error
+        language: system
+        types: [python]

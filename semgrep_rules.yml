@@ -1,0 +1,36 @@
+rules:
+  - id: hardcoded-google-api-key
+    patterns:
+      - pattern-regex: 'AIza[0-9A-Za-z-_]{35}'
+    message: "Potential hardcoded Google API Key (starts with AIza) detected. Please use environment variables or a secure vault."
+    severity: ERROR
+    languages: [python, yaml, json]
+
+  - id: hardcoded-aws-key
+    patterns:
+      - pattern-regex: 'AKIA[0-9A-Z]{16}'
+    message: "Potential hardcoded AWS Access Key ID (starts with AKIA) detected. Please use environment variables or AWS profiles."
+    severity: ERROR
+    languages: [python, yaml, json]
+
+  - id: secret-variable-assignment
+    patterns:
+      - pattern: $VAR = "$STR"
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: '(?i).*(password|passwd|secret|token|api_key|apikey|private_key|privatekey).*'
+      - metavariable-regex:
+          metavariable: $STR
+          regex: '^(?!\s*$).{4,}'
+    message: "Potential hardcoded secret assigned to '$VAR'. Do not commit passwords, tokens, or private keys."
+    severity: ERROR
+    languages: [python]
+
+  - id: requests-verify-false
+    patterns:
+      - pattern-either:
+          - pattern: requests.$FUNC(..., verify=False, ...)
+          - pattern: requests.request(..., verify=False, ...)
+    message: "SSL verification is disabled (verify=False). This exposes requests to Man-in-the-Middle (MitM) attacks."
+    severity: ERROR
+    languages: [python]

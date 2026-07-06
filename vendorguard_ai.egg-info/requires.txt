@@ -1,0 +1,11 @@
+google-adk
+streamlit
+pandas
+python-dotenv
+pydantic
+
+[dev]
+pre-commit
+semgrep
+detect-secrets
+pytest

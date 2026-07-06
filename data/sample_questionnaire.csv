@@ -1,0 +1,8 @@
+id,category,question
+SEC-001,Encryption,"Describe how customer data is encrypted both at rest in your databases and in transit across public networks."
+SEC-002,Vulnerability Management,"What is the frequency of your automated vulnerability scans, and how often do you undergo external third-party penetration testing?"
+SEC-003,Access Control,"How do you enforce access control and the principle of least privilege, and is Multi-Factor Authentication (MFA) required for all employee access?"
+SEC-004,Compliance,"Do you hold active SOC 2 Type II or ISO/IEC 27001 compliance certifications? Please provide the date of your latest audit."
+SEC-005,Incident Response,"Describe your incident response plan and specify your Service Level Agreement (SLA) for notifying customers in the event of a security breach."
+SEC-006,Business Continuity,"What are your Recovery Time Objective (RTO) and Recovery Point Objective (RPO) targets for backups and disaster recovery?"
+SEC-007,Cryptography,"Provide your detailed migration roadmap and timeline for transitioning all cryptographic systems to NIST-approved post-quantum/quantum-resistant algorithms."

@@ -1,0 +1,12 @@
+# Core Dependencies
+google-adk
+streamlit
+pandas
+python-dotenv
+pydantic
+
+# Dev Dependencies
+pre-commit
+semgrep
+detect-secrets
+pytest

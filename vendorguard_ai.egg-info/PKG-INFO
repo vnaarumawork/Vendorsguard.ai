@@ -1,0 +1,96 @@
+Metadata-Version: 2.4
+Name: vendorguard-ai
+Version: 0.1.0
+Summary: A Python ADK multi-agent vendor risk assessment security agent.
+License: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: google-adk
+Requires-Dist: streamlit
+Requires-Dist: pandas
+Requires-Dist: python-dotenv
+Requires-Dist: pydantic
+Provides-Extra: dev
+Requires-Dist: pre-commit; extra == "dev"
+Requires-Dist: semgrep; extra == "dev"
+Requires-Dist: detect-secrets; extra == "dev"
+Requires-Dist: pytest; extra == "dev"
+
+# VendorGuard AI
+
+`VendorGuard AI` is a Python ADK multi-agent system designed for automated, intelligent vendor risk assessment and security posture analysis.
+
+## Project Structure
+
+```text
+vendorguard-ai/
+├── app/                  # Main application package
+│   ├── __init__.py
+│   └── tools/            # Custom agent tools
+│       └── __init__.py
+├── ui/                   # Streamlit user interface
+├── data/                 # Local data storage, vendor profiles, reports
+├── knowledge/            # Retrieval-Augmented Generation (RAG) knowledge bases
+├── tests/                # Automated test suites
+├── docs/                 # Documentation and architecture diagrams
+├── pyproject.toml        # PEP 621 project configuration and dependencies
+├── requirements.txt      # Dependency list
+├── .env.example          # Template environment variable configuration
+├── .pre-commit-config.yaml # Pre-commit hook configuration for security checks
+└── semgrep_rules.yml     # Custom Semgrep security rules
+```
+
+## Getting Started
+
+### Prerequisites
+- Python >= 3.10
+- Git
+
+### Installation
+1. Clone the repository and navigate to the project directory:
+   ```bash
+   cd Vendorsguard.ai
+   ```
+2. Create and activate a virtual environment (if not already done):
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
+   ```
+3. Install dependencies in editable mode:
+   ```bash
+   pip install -e .[dev]
+   ```
+
+### Environment Configuration
+Copy the template configuration file to `.env` and fill in your keys:
+```bash
+cp .env.example .env
+```
+
+## Shift-Left Security
+
+This project enforces security best practices locally before changes are committed.
+
+### Pre-commit Hooks
+The pre-commit hooks check for:
+- Exposed private keys (`detect-private-key`)
+- Hardcoded secrets and credentials (`detect-secrets`)
+- Custom security vulnerabilities using Semgrep:
+  - Hardcoded Google API keys (`AIza...`)
+  - Hardcoded AWS Access Keys (`AKIA...`)
+  - Secret-looking variable assignments (e.g. `password = "secret"`)
+  - Disabling SSL certificate verification (`verify=False`)
+
+To install the git hook scripts:
+```bash
+pre-commit install
+```
+
+To run the checks manually against all files:
+```bash
+pre-commit run --all-files
+```

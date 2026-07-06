@@ -1,0 +1,40 @@
+{
+  "customer": "Acme Enterprise",
+  "questions": [
+    {
+      "id": "SEC-001",
+      "category": "Encryption",
+      "question": "Describe how customer data is encrypted both at rest in your databases and in transit across public networks."
+    },
+    {
+      "id": "SEC-002",
+      "category": "Vulnerability Management",
+      "question": "What is the frequency of your automated vulnerability scans, and how often do you undergo external third-party penetration testing?"
+    },
+    {
+      "id": "SEC-003",
+      "category": "Access Control",
+      "question": "How do you enforce access control and the principle of least privilege, and is Multi-Factor Authentication (MFA) required for all employee access?"
+    },
+    {
+      "id": "SEC-004",
+      "category": "Compliance",
+      "question": "Do you hold active SOC 2 Type II or ISO/IEC 27001 compliance certifications? Please provide the date of your latest audit."
+    },
+    {
+      "id": "SEC-005",
+      "category": "Incident Response",
+      "question": "Describe your incident response plan and specify your Service Level Agreement (SLA) for notifying customers in the event of a security breach."
+    },
+    {
+      "id": "SEC-006",
+      "category": "Business Continuity",
+      "question": "What are your Recovery Time Objective (RTO) and Recovery Point Objective (RPO) targets for backups and disaster recovery?"
+    },
+    {
+      "id": "SEC-007",
+      "category": "Cryptography",
+      "question": "Provide your detailed migration roadmap and timeline for transitioning all cryptographic systems to NIST-approved post-quantum/quantum-resistant algorithms."
+    }
+  ]
+}
