@@ -59,7 +59,6 @@ The pre-commit hooks check for:
 - Hardcoded secrets and credentials (`detect-secrets`)
 - Custom security vulnerabilities using Semgrep:
   - Hardcoded Google API keys (`AIza...`)
-  - Hardcoded AWS Access Keys (`AKIA...`)
   - Secret-looking variable assignments (e.g., assigning a string to a variable named 'password' or 'token')
   - Disabling SSL certificate verification (`verify=False`)
 
