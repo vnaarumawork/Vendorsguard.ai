@@ -21,3 +21,5 @@ __pycache__/
 
 # Pre-commit baseline
 .detect-secrets.baseline
+source/
+*.egg-info/

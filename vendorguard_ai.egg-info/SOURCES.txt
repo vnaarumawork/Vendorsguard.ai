@@ -1,9 +1,0 @@
-README.md
-pyproject.toml
-app/__init__.py
-app/tools/__init__.py
-vendorguard_ai.egg-info/PKG-INFO
-vendorguard_ai.egg-info/SOURCES.txt
-vendorguard_ai.egg-info/dependency_links.txt
-vendorguard_ai.egg-info/requires.txt
-vendorguard_ai.egg-info/top_level.txt
