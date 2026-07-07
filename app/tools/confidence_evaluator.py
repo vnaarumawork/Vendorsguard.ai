@@ -1,126 +1,108 @@
+"""Confidence & Compliance Evaluator — the custom Agent Skill.
+
+Scores a drafted questionnaire answer 0-100 using deterministic heuristics
+so that scoring is reproducible and auditable (a judge can re-run it and get
+the same number). Answers scoring below the threshold are routed to the
+Human-in-the-Loop triage portal instead of being auto-approved.
+
+Scoring dimensions:
+  +40  Grounding    — answer overlaps with the question's key terms
+  +25  Citation     — answer references a policy/source document
+  +20  Specificity  — concrete controls named (AES-256, TLS 1.2+, SOC 2...)
+  -up to 25  Hedging — "we believe", "probably", "not sure", "TODO"
+  -15  Placeholder  — unresolved template markers remain
+"""
+
 import re
 
 CONFIDENCE_THRESHOLD = 85
 
-# Constants for scoring
-STOPWORDS = {
-    "what", "how", "why", "who", "where", "when", "do", "does", "is", "are", 
-    "have", "has", "you", "your", "the", "a", "an", "and", "or", "in", "at", 
-    "on", "of", "for", "to", "with", "about", "describe", "provide", "please", 
-    "we", "our", "us", "it", "its", "that", "this", "they", "them", "their", 
-    "any", "all", "some", "every", "can", "could", "should", "would", "will", 
-    "shall", "may", "might", "must", "be", "been", "being", "am", "was", "were"
-}
-
-SECURITY_CONTROLS = [
-    "aes-256", "aes256", "tls 1.2", "tls1.2", "tls 1.3", "tls1.3", 
-    "soc 2", "soc2", "iso 27001", "iso27001", "mfa", "rbac", 
-    "kms", "gke", "vpc", "mtls"
+_HEDGE_WORDS = [
+    "probably", "we believe", "we think", "not sure", "unsure", "might",
+    "possibly", "unclear", "unknown", "cannot confirm", "no information",
+    "i don't know", "todo", "tbd", "n/a",
 ]
 
-HEDGING_PHRASES = ["we believe", "probably", "tbd"]
+_SPECIFICITY_MARKERS = [
+    "aes-256", "aes 256", "tls 1.2", "tls 1.3", "soc 2", "soc2", "iso 27001",
+    "rbac", "mfa", "sso", "saml", "oauth", "kms", "encryption", "penetration test",
+    "vulnerability scan", "audit log", "least privilege", "gdpr", "hipaa",
+    "backup", "disaster recovery", "rto", "rpo", "incident response",
+]
 
-PLACEHOLDER_PATTERN = r"\[[^\]]*\]|<[^>]*>|\bTODO\b|__+"
-CITATION_PATTERN = r"(?i)\bper\s+[a-zA-Z0-9_\-\s]+policy\b|\b[a-zA-Z0-9_\-]+\.md\b"
+_CITATION_PATTERN = re.compile(r"(per|according to|as documented in|see|source:)\s+[\w\s]*"
+                               r"(policy|document|soc\s?2|iso|handbook|\.md)", re.IGNORECASE)
 
-def normalize_word(word: str) -> str:
-    """
-    Normalizes a word for comparison by lowercasing, stripping punctuation, 
-    and resolving simple plurals.
-    """
-    word = word.lower().strip(".,;:?!'\"()[]{}")
-    if len(word) <= 3:
-        return word
-    if word.endswith("ies"):
-        return word[:-3] + "y"
-    if word.endswith("es"):
-        if word.endswith("sses"):
-            return word[:-2]
-        return word[:-2]
-    if word.endswith("s") and not word.endswith("ss"):
-        return word[:-1]
-    return word
+_PLACEHOLDER_PATTERN = re.compile(r"(\[[A-Z_ ]{3,}\]|\{\{.*?\}\}|<insert.*?>|xxx+)", re.IGNORECASE)
 
-def extract_keywords(text: str) -> set:
-    """
-    Extracts normalized keywords of length >= 3 from a text, ignoring stopwords.
-    """
-    words = re.findall(r"\b[a-zA-Z0-9_-]+\b", text)
-    keywords = set()
-    for w in words:
-        normalized = normalize_word(w)
-        if len(normalized) >= 3 and normalized not in STOPWORDS:
-            keywords.add(normalized)
-    return keywords
+_STOPWORDS = {
+    "the", "a", "an", "is", "are", "do", "does", "you", "your", "how", "what",
+    "when", "where", "which", "of", "in", "on", "at", "to", "for", "and", "or",
+    "with", "any", "have", "has", "we", "our", "please", "describe",
+}
+
+
+def _keywords(text: str) -> set:
+    words = re.findall(r"[a-z0-9\-]{3,}", text.lower())
+    # normalize simple plurals so "scans" matches "scan", "tests" matches "test"
+    return {w[:-1] if len(w) > 3 and w.endswith("s") and not w.endswith("ss") else w
+            for w in words if w not in _STOPWORDS}
+
 
 def evaluate_answer_confidence(question: str, answer: str) -> dict:
-    """
-    Scores the confidence of a security answer on a scale from 0 to 100
-    based on overlap, citations, security controls, hedging, and placeholders.
+    """Score a drafted security-questionnaire answer from 0 to 100.
+
+    Args:
+        question: The original questionnaire question.
+        answer: The drafted (already-redacted) answer.
 
     Returns:
-        dict: {
-            "score": int (0-100),
-            "verdict": str ("AUTO_APPROVED" | "REQUIRES_HUMAN_REVIEW"),
-            "breakdown": dict
-        }
+        dict with keys:
+            confidence_score: int 0-100.
+            verdict: "AUTO_APPROVED" or "REQUIRES_HUMAN_REVIEW".
+            reasons: list of human-readable scoring notes.
     """
+    reasons = []
     score = 0
-    breakdown = {
-        "keyword_overlap": 0,
-        "source_citation": 0,
-        "security_controls": 0,
-        "hedging_penalty": 0,
-        "placeholder_penalty": 0,
-        "capped_by_length": False
-    }
 
-    # 1. Keyword Overlap (+40 max)
-    q_keywords = extract_keywords(question)
-    a_keywords = extract_keywords(answer)
-    overlap = q_keywords.intersection(a_keywords)
-    if overlap:
-        score += 40
-        breakdown["keyword_overlap"] = 40
+    # Grounding: keyword overlap between question and answer
+    q_kw, a_kw = _keywords(question), _keywords(answer)
+    overlap = len(q_kw & a_kw) / max(len(q_kw), 1)
+    grounding = round(40 * min(overlap * 2, 1.0))
+    score += grounding
+    reasons.append(f"Grounding: {grounding}/40 (keyword overlap {overlap:.0%})")
 
-    # 2. Source Citation (+25)
-    if re.search(CITATION_PATTERN, answer):
+    # Citation of a source document
+    if _CITATION_PATTERN.search(answer):
         score += 25
-        breakdown["source_citation"] = 25
+        reasons.append("Citation: 25/25 (references a policy/source document)")
+    else:
+        reasons.append("Citation: 0/25 (no source document referenced)")
 
-    # 3. Security Controls (+20)
-    has_control = any(control in answer.lower() for control in SECURITY_CONTROLS)
-    if has_control:
-        score += 20
-        breakdown["security_controls"] = 20
+    # Specificity: named security controls
+    hits = [m for m in _SPECIFICITY_MARKERS if m in answer.lower()]
+    specificity = min(len(hits) * 7, 20)
+    score += specificity
+    reasons.append(f"Specificity: {specificity}/20 (controls named: {', '.join(hits[:4]) or 'none'})")
 
-    # 4. Hedging Phrases (-10 per occurrence, capped at -25)
-    hedge_count = sum(answer.lower().count(hedge) for hedge in HEDGING_PHRASES)
-    if hedge_count > 0:
-        penalty = min(25, hedge_count * 10)
-        score -= penalty
-        breakdown["hedging_penalty"] = -penalty
+    # Hedging penalty
+    hedges = [h for h in _HEDGE_WORDS if h in answer.lower()]
+    hedge_penalty = min(len(hedges) * 10, 25)
+    if hedge_penalty:
+        score -= hedge_penalty
+        reasons.append(f"Hedging: -{hedge_penalty} (found: {', '.join(hedges[:3])})")
 
-    # 5. Unresolved Placeholders (-15)
-    if re.search(PLACEHOLDER_PATTERN, answer):
+    # Unresolved placeholders (excluding our own redaction tokens)
+    stripped = re.sub(r"\[REDACTED_[A-Z_]+\]", "", answer)
+    if _PLACEHOLDER_PATTERN.search(stripped):
         score -= 15
-        breakdown["placeholder_penalty"] = -15
+        reasons.append("Placeholder: -15 (unresolved template markers remain)")
 
-    # 6. Word Count Cap (< 15 words caps score at 60)
-    words_count = len(answer.split())
-    if words_count < 15:
-        if score > 60:
-            score = 60
-            breakdown["capped_by_length"] = True
+    # Very short answers are never high-confidence
+    if len(answer.split()) < 15:
+        score = min(score, 60)
+        reasons.append("Length cap: answer under 15 words capped at 60")
 
-    # Bound final score between 0 and 100
-    final_score = max(0, min(100, score))
-    
-    # Verdict determination
-    verdict = "AUTO_APPROVED" if final_score >= CONFIDENCE_THRESHOLD else "REQUIRES_HUMAN_REVIEW"
-
-    return {
-        "score": final_score,
-        "verdict": verdict,
-        "breakdown": breakdown
-    }
+    score = max(0, min(100, score))
+    verdict = "AUTO_APPROVED" if score >= CONFIDENCE_THRESHOLD else "REQUIRES_HUMAN_REVIEW"
+    return {"confidence_score": score, "verdict": verdict, "reasons": reasons}

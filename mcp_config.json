@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "policy-filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "./knowledge"
+      ],
+      "description": "Read-only window into the mock company policy folder. The Policy Research Agent can ONLY see this directory — no arbitrary filesystem access."
+    }
+  }
+}
